@@ -1,6 +1,10 @@
+import 'package:cookbook/model/data.dart';
+import 'package:cookbook/parse.dart';
+import 'package:cookbook/shared/helper.dart';
 import 'package:cupertino_list_tile/cupertino_list_tile.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,6 +15,26 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   @override
+  void initState() {
+    beforeHook();
+    super.initState();
+  }
+
+  CoreParse coreParse = CoreParse();
+  CookParseDataModel? data;
+
+  beforeHook() async {
+    String raw = await rootBundle.loadString(joinMarkdownPath('README.md'));
+    data = tryParse(raw);
+    setState(() {});
+  }
+
+  tryParse(String raw) {
+    coreParse.parseMetaData(raw);
+    return coreParse.data;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
@@ -19,7 +43,6 @@ class _HomePageState extends State<HomePage> {
           const CupertinoSliverNavigationBar(
             border: Border(),
             largeTitle: Text('程序员做饭指南'),
-            trailing: Icon(CupertinoIcons.info),
           ),
           SliverFillRemaining(
             child: Padding(
@@ -44,7 +67,7 @@ class _HomePageState extends State<HomePage> {
                                 vertical: 12.0,
                               ),
                               child: Text(
-                                "菜谱",
+                                "做菜之前",
                                 style: TextStyle(
                                   fontSize: 14.0,
                                   color: CupertinoColors.systemGrey,
@@ -53,24 +76,76 @@ class _HomePageState extends State<HomePage> {
                             ),
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(4.2),
+                                color: CupertinoTheme.of(context)
+                                    .barBackgroundColor,
+                                borderRadius: BorderRadius.circular(7.2),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 9.0,
+                                horizontal: 3.0,
                               ),
                               child: Column(
                                 children: List.generate(
-                                  12,
-                                  (index) => const CupertinoListTile(
-                                    border: Border(
-                                      bottom: BorderSide(
-                                        color: CupertinoColors
-                                            .systemGroupedBackground,
-                                      ),
-                                    ),
+                                  data!.before.length,
+                                  (index) => CupertinoListTile(
+                                    onTap: () {
+                                      var curr = data!.before[index];
+                                      var link = curr.link;
+                                      context.push('/detail?link=$link');
+                                    },
                                     dense: true,
-                                    title: Text("你好世界"),
+                                    title: Text(
+                                      data!.before[index].title,
+                                    ),
                                   ),
                                 ),
                               ),
+                            ),
+                            Column(
+                              children: data!.data.entries.map((e) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4.2,
+                                        vertical: 12.0,
+                                      ),
+                                      child: Text(
+                                        e.key,
+                                        style: const TextStyle(
+                                          fontSize: 14.0,
+                                          color: CupertinoColors.systemGrey,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: CupertinoTheme.of(context)
+                                            .barBackgroundColor,
+                                        borderRadius:
+                                            BorderRadius.circular(7.2),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 9.0,
+                                        horizontal: 3.0,
+                                      ),
+                                      child: Column(
+                                        children: e.value.map((sub) {
+                                          return CupertinoListTile(
+                                            dense: true,
+                                            onTap: () {
+                                              var link = sub.link;
+                                              context.push('/detail?link=$link');
+                                            },
+                                            title: Text(sub.title),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
                             ),
                           ],
                         ),
