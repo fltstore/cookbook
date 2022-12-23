@@ -1,3 +1,4 @@
+import 'package:async/async.dart';
 import 'package:cookbook/model/data.dart';
 import 'package:cookbook/parse.dart';
 import 'package:cookbook/shared/helper.dart';
@@ -19,16 +20,19 @@ class _HomePageState extends State<HomePage> {
     super.initState();
   }
 
-  CoreParse coreParse = CoreParse();
+  final AsyncMemoizer _memoizer = AsyncMemoizer();
 
   Future<CookParseDataModel> loadReadme() async {
     // await Future.delayed(Duration(seconds: 2));
-    String raw = await rootBundle.loadString(joinMarkdownPath('README.md'));
+    String raw = await _memoizer.runOnce(() async {
+      return await rootBundle.loadString(joinMarkdownPath('README.md'));
+    });
     var data = tryParse(raw);
     return data;
   }
 
   tryParse(String raw) {
+    CoreParse coreParse = CoreParse();
     coreParse.parseMetaData(raw);
     return coreParse.data;
   }

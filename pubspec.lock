@@ -9,7 +9,7 @@ packages:
     source: hosted
     version: "2.3.1"
   async:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: async
       url: "https://mirrors.tuna.tsinghua.edu.cn/dart-pub/"
