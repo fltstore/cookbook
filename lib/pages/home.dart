@@ -120,6 +120,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                             Column(
                               children: data.data.entries.map((e) {
+                                String category = e.key.replaceFirst('### ', '');
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -129,7 +130,7 @@ class _HomePageState extends State<HomePage> {
                                         vertical: 12.0,
                                       ),
                                       child: Text(
-                                        e.key,
+                                        category,
                                         style: const TextStyle(
                                           fontSize: 14.0,
                                           color: CupertinoColors.systemGrey,
