@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 typedef ColCookList = Map<String, List<Before>>;
+typedef ValueChanged2<T, T1> = void Function(T value, T1 value2);
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,6 +27,8 @@ class _HomePageState extends State<HomePage> {
   List<String> ignoreCookBookItem = [];
 
   bool showLoading = true;
+
+  bool showBefore = true;
 
   String searchText = "";
 
@@ -73,12 +76,14 @@ class _HomePageState extends State<HomePage> {
 
   handleShowFilter() async {
     ColCookList raw = data!.data;
-    var filter = await showCookBookModal(raw, ignoreCookBookItem);
-    ignoreCookBookItem = filter;
+    var ctx = await showCookBookModal(raw, ignoreCookBookItem);
+    showBefore = ctx['before'];
+    ignoreCookBookItem = ctx['undo'] as List<String>;
     setState(() {});
   }
 
   List<Before> easyFilterWithBefore(List<Before> old) {
+    if (!showBefore) return [];
     if (searchText.isEmpty) return old;
     return old.where((element) {
       return element.title.contains(searchText);
@@ -117,16 +122,20 @@ class _HomePageState extends State<HomePage> {
     return output;
   }
 
-  Future<List<String>> showCookBookModal(ColCookList data, List<String> undo) {
-    Completer<List<String>> completer = Completer();
+  Future<Map<String, dynamic>> showCookBookModal(
+    ColCookList data,
+    List<String> undo,
+  ) {
+    Completer<Map<String, dynamic>> completer = Completer();
     showCupertinoModalPopup(
       useRootNavigator: true,
       context: context,
       builder: (_) => CookBookPopup(
+        showBefore: showBefore,
         data: data,
         undoInitValue: undo,
-        onConfirm: (undo) {
-          completer.complete(undo);
+        onConfirm: (undo, showBefore) {
+          completer.complete({"undo": undo, "before": showBefore});
         },
       ),
     );
@@ -299,13 +308,15 @@ class CookBookPopup extends StatefulWidget {
   const CookBookPopup({
     super.key,
     this.undoInitValue = const [],
+    this.showBefore = false,
     required this.data,
     required this.onConfirm,
   });
 
   final ColCookList data;
-  final ValueChanged<List<String>> onConfirm;
+  final ValueChanged2<List<String>, bool> onConfirm;
   final List<String> undoInitValue;
+  final bool showBefore;
 
   @override
   State<CookBookPopup> createState() => _CookBookPopupState();
@@ -315,6 +326,8 @@ class _CookBookPopupState extends State<CookBookPopup> {
   ColCookList data = {};
 
   List<String> undo = [];
+
+  bool showBefore = true;
 
   List<String> get doing {
     var raw = data.entries.map((e) => e.key).toList().where((element) {
@@ -327,6 +340,7 @@ class _CookBookPopupState extends State<CookBookPopup> {
   void initState() {
     data = widget.data;
     undo = widget.undoInitValue;
+    showBefore = widget.showBefore;
     super.initState();
   }
 
@@ -350,9 +364,29 @@ class _CookBookPopupState extends State<CookBookPopup> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    Transform.scale(
+                      scale: .72,
+                      child: CupertinoSwitch(
+                        value: showBefore,
+                        onChanged: (value) {
+                          showBefore = value;
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                    Text(
+                      "做菜之前",
+                      style: TextStyle(
+                        fontSize: 12.0,
+                        color: CupertinoTheme.of(context)
+                            .primaryColor
+                            .withOpacity(.72),
+                      ),
+                    ),
+                    const SizedBox(width: 18),
                     GestureDetector(
                       onTap: () {
-                        widget.onConfirm(undo);
+                        widget.onConfirm(undo, showBefore);
                         Navigator.of(context).pop(-2);
                       },
                       child: Text(
