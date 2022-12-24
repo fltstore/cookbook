@@ -92,7 +92,7 @@ class _HomePageState extends State<HomePage> {
 
   ColCookList easyFilterWithColData(ColCookList old) {
     if (ignoreCookBookItem.isNotEmpty) {
-      return easyPutColCookList(old, isIgnore: true);
+      old = easyPutColCookList(old, isIgnore: true);
     }
     if (searchText.isEmpty) return old;
     return easyPutColCookList(old);
