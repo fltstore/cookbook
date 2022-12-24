@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:async/async.dart';
 import 'package:cookbook/model/data.dart';
 import 'package:cookbook/parse.dart';
@@ -20,6 +22,8 @@ class _HomePageState extends State<HomePage> {
   CookParseDataModel? data;
   final AsyncMemoizer _memoizer = AsyncMemoizer();
   final TextEditingController _textEditingController = TextEditingController();
+
+  List<String> ignoreCookBookItem = [];
 
   bool showLoading = true;
 
@@ -52,7 +56,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   loadReadme() async {
-    await Future.delayed(const Duration(seconds: 2));
     String raw = await _memoizer.runOnce(() async {
       return await rootBundle.loadString(joinMarkdownPath('README.md'));
     });
@@ -60,10 +63,19 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
+  List<String> notInclude = [];
+
   tryParse(String raw) {
     CoreParse coreParse = CoreParse();
     coreParse.parseMetaData(raw);
     return coreParse.data;
+  }
+
+  handleShowFilter() async {
+    ColCookList raw = data!.data;
+    var filter = await showCookBookModal(raw, ignoreCookBookItem);
+    ignoreCookBookItem = filter;
+    setState(() {});
   }
 
   List<Before> easyFilterWithBefore(List<Before> old) {
@@ -74,20 +86,51 @@ class _HomePageState extends State<HomePage> {
   }
 
   ColCookList easyFilterWithColData(ColCookList old) {
+    if (ignoreCookBookItem.isNotEmpty) {
+      return easyPutColCookList(old, isIgnore: true);
+    }
     if (searchText.isEmpty) return old;
+    return easyPutColCookList(old);
+  }
+
+  ColCookList easyPutColCookList(ColCookList data, {bool isIgnore = false}) {
     ColCookList output = {};
-    for (var element in old.entries) {
+    for (var element in data.entries) {
       var K = element.key;
       var V = element.value;
       if (output[K] == null) {
         output[K] = [];
       }
-      var matchResult = V.where((element) {
-        return element.title.contains(searchText);
-      }).toList();
-      output[K]!.addAll(matchResult);
+      if (isIgnore) {
+        if (!ignoreCookBookItem.contains(K)) {
+          output[K] = V;
+        } else {
+          continue;
+        }
+      } else {
+        var matchResult = V.where((element) {
+          return element.title.contains(searchText);
+        }).toList();
+        output[K]!.addAll(matchResult);
+      }
     }
     return output;
+  }
+
+  Future<List<String>> showCookBookModal(ColCookList data, List<String> undo) {
+    Completer<List<String>> completer = Completer();
+    showCupertinoModalPopup(
+      useRootNavigator: true,
+      context: context,
+      builder: (_) => CookBookPopup(
+        data: data,
+        undoInitValue: undo,
+        onConfirm: (undo) {
+          completer.complete(undo);
+        },
+      ),
+    );
+    return completer.future;
   }
 
   @override
@@ -115,8 +158,23 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 12.0),
-                  CupertinoSearchTextField(
-                    controller: _textEditingController,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CupertinoSearchTextField(
+                          controller: _textEditingController,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: handleShowFilter,
+                        child: const Icon(
+                          CupertinoIcons.folder_open,
+                          size: 32,
+                          semanticLabel: "过滤器",
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 6.0),
                   Expanded(
@@ -232,6 +290,189 @@ class _HomePageState extends State<HomePage> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class CookBookPopup extends StatefulWidget {
+  const CookBookPopup({
+    super.key,
+    this.undoInitValue = const [],
+    required this.data,
+    required this.onConfirm,
+  });
+
+  final ColCookList data;
+  final ValueChanged<List<String>> onConfirm;
+  final List<String> undoInitValue;
+
+  @override
+  State<CookBookPopup> createState() => _CookBookPopupState();
+}
+
+class _CookBookPopupState extends State<CookBookPopup> {
+  ColCookList data = {};
+
+  List<String> undo = [];
+
+  List<String> get doing {
+    var raw = data.entries.map((e) => e.key).toList().where((element) {
+      return !undo.any((sub) => element == sub);
+    }).toList();
+    return raw;
+  }
+
+  @override
+  void initState() {
+    data = widget.data;
+    undo = widget.undoInitValue;
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        width: double.infinity,
+        height: 320,
+        decoration: BoxDecoration(
+          color: CupertinoTheme.of(context).barBackgroundColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 32,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        widget.onConfirm(undo);
+                        Navigator.of(context).pop(-2);
+                      },
+                      child: Text(
+                        "确定",
+                        style: TextStyle(
+                          color: CupertinoTheme.of(context).primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Text(
+                "已选菜系",
+                style: TextStyle(color: CupertinoColors.systemPink),
+              ),
+              const SizedBox(height: 9.0),
+              if (doing.isEmpty) const CookBookTableEmpty(),
+              if (doing.isNotEmpty)
+                CookBookTable(
+                  data: doing,
+                  onTap: (value) {
+                    undo.add(value);
+                    setState(() {});
+                  },
+                ),
+              const SizedBox(height: 9.0),
+              const Text(
+                "未选菜系",
+                style: TextStyle(color: CupertinoColors.systemGrey),
+              ),
+              const SizedBox(height: 9.0),
+              if (undo.isEmpty) const CookBookTableEmpty(),
+              if (undo.isNotEmpty)
+                CookBookTable(
+                  data: undo,
+                  onTap: (value) {
+                    undo.remove(value);
+                    setState(() {});
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CookBookTable extends StatelessWidget {
+  const CookBookTable({
+    super.key,
+    this.onTap,
+    required this.data,
+    this.color,
+  });
+
+  final ValueChanged<String>? onTap;
+  final List<String> data;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    late Color reColor;
+    if (color != null) {
+      reColor = color as Color;
+    } else {
+      reColor = CupertinoTheme.of(context).primaryColor;
+    }
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: data
+            .map(
+              (e) => Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6.0,
+                ),
+                child: GestureDetector(
+                  onTap: () {
+                    onTap!(e);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0,
+                    ),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: reColor,
+                      borderRadius: BorderRadius.circular(9.0),
+                    ),
+                    child: Text(
+                      e.replaceFirst("### ", ""),
+                      style: const TextStyle(
+                        color: CupertinoColors.white,
+                        fontSize: 12.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+}
+
+class CookBookTableEmpty extends StatelessWidget {
+  const CookBookTableEmpty({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      "暂无~",
+      style: TextStyle(
+        fontSize: 12.0,
+        color: CupertinoTheme.of(context).primaryColor,
       ),
     );
   }
