@@ -92,9 +92,11 @@ function reWritePubspecYaml(rewriteData) {
     if (line == '# assets:') {
       lines.splice(index, 1)
       lines.splice(index, 0, `${createTabsize(2)}assets: # ${kMessage}`)
-      lines.splice(index + 1, 0, `${createTabsize(4)}- assets/HowToCook/README.md`)
-      lines.splice(index + 2, 0, rewriteData)
-      lines.splice(index + 3, 0, `${ kTabSpace }####### END ######`)
+      lines.splice(index + 1, 0, `${createTabsize(4)}- assets/wan.png`)
+      lines.splice(index + 2, 0, `${createTabsize(4)}- assets/wan_black.png`)
+      lines.splice(index + 3, 0, `${createTabsize(4)}- assets/HowToCook/README.md`)
+      lines.splice(index + 4, 0, rewriteData)
+      lines.splice(index + 5, 0, `${ kTabSpace }####### END ######`)
       break
     }
   }

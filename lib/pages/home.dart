@@ -144,6 +144,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    bool isDarkMode =
+        MediaQuery.of(context).platformBrightness == Brightness.dark;
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
       navigationBar: const CupertinoNavigationBar(
@@ -175,14 +177,21 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      GestureDetector(
-                        onTap: handleShowFilter,
-                        child: const Icon(
-                          CupertinoIcons.folder_open,
-                          size: 32,
-                          semanticLabel: "过滤器",
-                        ),
-                      ),
+                      Builder(builder: (context) {
+                        var file = 'wan';
+                        if (!isDarkMode) {
+                          file += '_black';
+                        }
+                        file += '.png';
+                        return GestureDetector(
+                          onTap: handleShowFilter,
+                          child: Image.asset(
+                            "assets/$file",
+                            width: 32,
+                            height: 32,
+                          ),
+                        );
+                      }),
                     ],
                   ),
                   const SizedBox(height: 6.0),
