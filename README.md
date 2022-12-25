@@ -8,7 +8,7 @@
 
 <div>
 
-<img width="120" alt="image" src="https://user-images.githubusercontent.com/45585937/209466078-cb7fd07d-c2a9-4a64-814f-4d9e499b153a.png">
-<img width="120" alt="image" src="https://user-images.githubusercontent.com/45585937/209466098-f139912c-a158-4af8-8f31-2594dd5c09ae.png">
+<img width="180" alt="image" src="https://user-images.githubusercontent.com/45585937/209466078-cb7fd07d-c2a9-4a64-814f-4d9e499b153a.png">
+<img width="180" alt="image" src="https://user-images.githubusercontent.com/45585937/209466098-f139912c-a158-4af8-8f31-2594dd5c09ae.png">
 
 </div>
